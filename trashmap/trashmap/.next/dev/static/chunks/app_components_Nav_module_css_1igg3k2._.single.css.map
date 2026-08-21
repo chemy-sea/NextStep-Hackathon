@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 1, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/app/components/Nav.module.css"],"sourcesContent":["/* Layout-only responsive nav switching. No colors/theming here on purpose —\n   visual design is a later step. */\n\n.nav {\n  width: 100%;\n}\n\n/* Mobile: bottom tab bar */\n.tabBar {\n  display: flex;\n  justify-content: space-around;\n  position: fixed;\n  bottom: 0;\n  left: 0;\n  right: 0;\n  border-top: 1px solid;\n}\n\n.tabBar .navLink {\n  flex: 1;\n  text-align: center;\n  padding: 0.5rem;\n}\n\n/* Desktop: top nav (sidebar-style list, laid out horizontally) */\n.topNav {\n  display: none;\n  border-bottom: 1px solid;\n}\n\n.navList {\n  display: flex;\n  list-style: none;\n  margin: 0;\n  padding: 0.5rem 1rem;\n  gap: 1.5rem;\n}\n\n@media (min-width: 768px) {\n  .tabBar {\n    display: none;\n  }\n\n  .topNav {\n    display: block;\n  }\n}\n"],"names":[],"mappings":"AAGA;;;;AAKA;;;;;;;;;;AAUA;;;;;;AAOA;;;;;AAKA;;;;;;;;AAQA;EACE;;;;EAIA"}}]
+}
