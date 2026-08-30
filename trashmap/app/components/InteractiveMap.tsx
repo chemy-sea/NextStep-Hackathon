@@ -1,21 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import type { CircleMarker, LayerGroup, Map as LeafletMap, TileLayer } from "leaflet";
 import {
-  MapPin,
-  Sparkles,
-  Flame,
-  Plus,
-  Compass,
-  Navigation,
-  Layers,
-  ZoomIn,
-  ZoomOut,
-  Crosshair,
-  Clock,
-  Award,
-  ChevronRight,
-  X,
+  Award, ChevronRight, Crosshair, ExternalLink, Layers, LocateFixed,
+  Map as MapIcon, Plus, Sparkles, X, ZoomIn, ZoomOut,
 } from "lucide-react";
 import { Bounty } from "@/lib/types";
 
@@ -27,338 +16,189 @@ interface InteractiveMapProps {
   onOpenPostBounty: () => void;
 }
 
+const MANILA_CENTER: [number, number] = [14.5906, 120.9818];
+
 export default function InteractiveMap({
-  bounties,
-  selectedBounty,
-  onSelectBounty,
-  onOpenDetailModal,
-  onOpenPostBounty,
+  bounties, selectedBounty, onSelectBounty, onOpenDetailModal, onOpenPostBounty,
 }: InteractiveMapProps) {
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [mapStyle, setMapStyle] = useState<"standard" | "satellite">("standard");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const markersRef = useRef<LayerGroup | null>(null);
+  const locationMarkerRef = useRef<CircleMarker | null>(null);
+  const tileLayersRef = useRef<Record<"map" | "satellite", TileLayer> | null>(null);
+  const userPositionRef = useRef<[number, number] | null>(null);
+  const selectRef = useRef(onSelectBounty);
+  const [mapType, setMapType] = useState<"map" | "satellite">("map");
+  const [mapReady, setMapReady] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<"locating" | "live" | "unavailable">("locating");
 
-  // Map coordinates projection helper for Austin demo area (Lat: 30.24 to 30.29, Lng: -97.80 to -97.73)
-  const getPinPosition = (lat: number, lng: number) => {
-    const minLat = 30.245;
-    const maxLat = 30.29;
-    const minLng = -97.805;
-    const maxLng = -97.73;
+  useEffect(() => {
+    selectRef.current = onSelectBounty;
+  }, [onSelectBounty]);
 
-    const x = ((lng - minLng) / (maxLng - minLng)) * 100;
-    const y = ((maxLat - lat) / (maxLat - minLat)) * 100;
+  useEffect(() => {
+    if (!containerRef.current) return;
+    let cancelled = false;
+    let locationWatch: number | undefined;
+    let resizeObserver: ResizeObserver | undefined;
 
-    return {
-      left: `${Math.max(8, Math.min(92, x))}%`,
-      top: `${Math.max(10, Math.min(90, y))}%`,
+    import("leaflet").then((L) => {
+      if (cancelled || !containerRef.current) return;
+      const map = L.map(containerRef.current, {
+        attributionControl: true, zoomControl: false, minZoom: 11, maxZoom: 19,
+      }).setView(MANILA_CENTER, 14);
+      const road = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19,
+      }).addTo(map);
+      const satellite = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        { attribution: "Tiles &copy; Esri", maxZoom: 19 }
+      );
+
+      mapRef.current = map;
+      tileLayersRef.current = { map: road, satellite };
+      markersRef.current = L.layerGroup().addTo(map);
+      map.on("click", () => selectRef.current(null));
+      resizeObserver = new ResizeObserver(() => map.invalidateSize());
+      resizeObserver.observe(containerRef.current);
+      setMapReady(true);
+
+      if (navigator.geolocation) {
+        locationWatch = navigator.geolocation.watchPosition(
+          ({ coords }) => {
+            const point: [number, number] = [coords.latitude, coords.longitude];
+            userPositionRef.current = point;
+            if (!locationMarkerRef.current) {
+              locationMarkerRef.current = L.circleMarker(point, {
+                className: "trashmap-user-location", color: "#fff", fillColor: "#306D29",
+                fillOpacity: 1, radius: 8, weight: 3,
+              }).addTo(map).bindTooltip("Your live location");
+            } else locationMarkerRef.current.setLatLng(point);
+            setLocationStatus("live");
+          },
+          () => setLocationStatus("unavailable"),
+          { enableHighAccuracy: true, maximumAge: 15_000, timeout: 10_000 }
+        );
+      } else setLocationStatus("unavailable");
+    });
+
+    return () => {
+      cancelled = true;
+      if (locationWatch !== undefined) navigator.geolocation.clearWatch(locationWatch);
+      resizeObserver?.disconnect();
+      mapRef.current?.remove();
+      mapRef.current = null;
+      markersRef.current = null;
+      locationMarkerRef.current = null;
     };
+  }, []);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !markersRef.current) return;
+    let cancelled = false;
+    import("leaflet").then((L) => {
+      if (cancelled || !mapRef.current || !markersRef.current) return;
+      markersRef.current.clearLayers();
+      bounties.forEach((bounty) => {
+        const selected = bounty.id === selectedBounty?.id;
+        const state = bounty.isHighReward ? "event" : bounty.status.replace("_", "-");
+        const icon = L.divIcon({
+          className: "",
+          html: `<span class="trashmap-marker trashmap-marker--${state}${selected ? " is-selected" : ""}"><b>${bounty.isHighReward ? "★" : "✦"}</b>${bounty.points}</span>`,
+          iconAnchor: [30, 34], iconSize: [60, 34],
+        });
+        L.marker([bounty.location.lat, bounty.location.lng], {
+          bubblingMouseEvents: false, icon, keyboard: true,
+          title: `${bounty.title}, ${bounty.points} points`,
+        }).on("click", () => selectRef.current(selected ? null : bounty)).addTo(markersRef.current!);
+      });
+      if (selectedBounty) {
+        mapRef.current.panInside([selectedBounty.location.lat, selectedBounty.location.lng], {
+          animate: true, padding: [80, 80],
+        });
+      }
+    });
+    return () => { cancelled = true; };
+  }, [bounties, mapReady, selectedBounty]);
+
+  const switchMapType = (type: "map" | "satellite") => {
+    const map = mapRef.current;
+    const layers = tileLayersRef.current;
+    if (map && layers && type !== mapType) {
+      map.removeLayer(layers[mapType]);
+      layers[type].addTo(map);
+    }
+    setMapType(type);
   };
 
-  const getPinColor = (bounty: Bounty) => {
-    if (bounty.isHighReward) return "bg-red-600 text-white ring-4 ring-red-400/40 animate-pulse";
-    switch (bounty.status) {
-      case "open":
-        return "bg-blue-600 text-white ring-4 ring-blue-500/20";
-      case "in_progress":
-        return "bg-amber-500 text-white ring-4 ring-amber-500/20";
-      case "pending_verification":
-        return "bg-purple-600 text-white ring-4 ring-purple-500/20";
-      case "verified":
-        return "bg-emerald-600 text-white ring-4 ring-emerald-500/20";
-      default:
-        return "bg-slate-700 text-white";
-    }
+  const recenter = () => {
+    const map = mapRef.current;
+    if (map) map.flyTo(userPositionRef.current ?? MANILA_CENTER, userPositionRef.current ? 16 : 14);
   };
 
   return (
-    <div className="relative w-full h-full min-h-[480px] bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 shadow-inner select-none">
-      {/* Visual Map Canvas / Vector Roads & Waterways Simulation */}
-      <div
-        className={`absolute inset-0 transition-transform duration-300 ${
-          mapStyle === "satellite" ? "bg-slate-900" : "bg-[#f4f3f0]"
-        }`}
-        style={{
-          transform: `scale(${zoomLevel})`,
-          transformOrigin: "center center",
-        }}
-      >
-        {/* River / Waterway (Lady Bird Lake & Colorado River) */}
-        <svg
-          className="absolute inset-0 w-full h-full pointer-events-none opacity-80"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M -10 240 C 150 220, 280 290, 450 250 C 600 210, 750 310, 950 270 C 1100 240, 1300 320, 1600 280"
-            fill="none"
-            stroke="#93c5fd"
-            strokeWidth="32"
-            strokeLinecap="round"
-          />
-          <path
-            d="M 280 290 C 260 400, 220 520, 190 700"
-            fill="none"
-            stroke="#bfdbfe"
-            strokeWidth="16"
-            strokeLinecap="round"
-          />
+    <section className="relative h-full min-h-[500px] w-full overflow-hidden rounded-2xl border border-[#E8E2D5] bg-[#E9EFE6] shadow-md">
+      <div ref={containerRef} className="absolute inset-0 z-0 h-full w-full" role="application" aria-label="Interactive map of cleanup bounties in Manila" />
+      {!mapReady && <div className="absolute inset-0 z-10 grid place-items-center bg-[#F5F1E9] text-sm font-bold text-[#0D530E]">Loading live map…</div>}
 
-          {/* Park Zones (Zilker, Greenbelt, Town Lake) */}
-          <path
-            d="M 180 230 Q 320 200 340 330 Q 220 380 180 320 Z"
-            fill="#dcfce7"
-            opacity="0.8"
-          />
-          <path
-            d="M 450 180 Q 560 160 580 260 Q 470 290 440 230 Z"
-            fill="#dcfce7"
-            opacity="0.7"
-          />
-
-          {/* Major Highways & Roads (I-35, MoPac, Hwy 71, Congress) */}
-          <line
-            x1="0"
-            y1="340"
-            x2="1600"
-            y2="340"
-            stroke="#ffffff"
-            strokeWidth="6"
-          />
-          <line
-            x1="0"
-            y1="340"
-            x2="1600"
-            y2="340"
-            stroke="#e2e8f0"
-            strokeWidth="2"
-          />
-
-          <line
-            x1="520"
-            y1="0"
-            x2="520"
-            y2="1000"
-            stroke="#fef08a"
-            strokeWidth="6"
-          />
-          <line
-            x1="760"
-            y1="0"
-            x2="760"
-            y2="1000"
-            stroke="#ffffff"
-            strokeWidth="8"
-          />
-          <line
-            x1="760"
-            y1="0"
-            x2="760"
-            y2="1000"
-            stroke="#cbd5e1"
-            strokeWidth="2"
-          />
-
-          <line
-            x1="220"
-            y1="0"
-            x2="220"
-            y2="1000"
-            stroke="#ffffff"
-            strokeWidth="6"
-          />
-
-          {/* Secondary Grid Lines */}
-          <line x1="0" y1="140" x2="1600" y2="140" stroke="#ffffff" strokeWidth="3" />
-          <line x1="0" y1="480" x2="1600" y2="480" stroke="#ffffff" strokeWidth="3" />
-          <line x1="380" y1="0" x2="380" y2="1000" stroke="#ffffff" strokeWidth="3" />
-          <line x1="920" y1="0" x2="920" y2="1000" stroke="#ffffff" strokeWidth="3" />
-        </svg>
-
-        {/* City & Park Labels */}
-        <div className="absolute top-[28%] left-[22%] text-xs font-bold text-emerald-800 pointer-events-none bg-emerald-100/80 px-2 py-0.5 rounded">
-          Zilker Metropolitan Park
+      <div className="pointer-events-none absolute left-3 top-3 z-[500] flex max-w-[calc(100%-5rem)] flex-wrap gap-2">
+        <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-[#E8E2D5] bg-white/95 px-3 py-2 text-xs font-black text-[#0D530E] shadow-md backdrop-blur-md">
+          <span className={`h-2 w-2 rounded-full ${locationStatus === "live" ? "animate-pulse bg-[#306D29]" : "bg-[#A7A29A]"}`} />
+          <span>{locationStatus === "live" ? "Live location on" : locationStatus === "locating" ? "Finding your location…" : "Live map · Manila"}</span>
         </div>
-        <div className="absolute top-[48%] left-[16%] text-xs font-bold text-emerald-800 pointer-events-none bg-emerald-100/80 px-2 py-0.5 rounded">
-          Barton Creek Greenbelt
-        </div>
-        <div className="absolute top-[16%] left-[54%] text-sm font-extrabold text-slate-800 tracking-wider pointer-events-none bg-white/70 px-2 py-0.5 rounded">
-          DOWNTOWN AUSTIN
-        </div>
-        <div className="absolute top-[24%] left-[64%] text-xs font-semibold text-blue-800 pointer-events-none">
-          Lady Bird Lake
+        <div className="pointer-events-auto flex rounded-xl border border-[#E8E2D5] bg-white/95 p-1 text-xs font-bold shadow-md backdrop-blur-md">
+          {(["map", "satellite"] as const).map((type) => (
+            <button key={type} type="button" onClick={() => switchMapType(type)} aria-pressed={mapType === type}
+              className={`flex cursor-pointer items-center gap-1 rounded-lg px-2.5 py-1.5 capitalize transition-colors ${mapType === type ? "bg-[#0D530E] text-white" : "text-[#0D530E] hover:bg-[#F5F1E9]"}`}>
+              {type === "map" ? <MapIcon className="h-3.5 w-3.5" /> : <Layers className="h-3.5 w-3.5" />}{type}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* User Current Location Dot (Austin Center) */}
-      <div
-        className="absolute z-20 -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-        style={{ left: "48%", top: "42%" }}
-        title="You are here"
-      >
-        <div className="relative flex items-center justify-center">
-          <div className="w-6 h-6 rounded-full bg-blue-500/30 animate-ping absolute" />
-          <div className="w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-md relative z-10" />
+      <div className="absolute right-3 top-3 z-[500] flex flex-col gap-2">
+        <div className="flex flex-col overflow-hidden rounded-xl border border-[#E8E2D5] bg-white shadow-md">
+          <button type="button" onClick={() => mapRef.current?.zoomIn()} className="cursor-pointer p-2.5 text-[#0D530E] hover:bg-[#F5F1E9]" aria-label="Zoom in"><ZoomIn className="h-4 w-4" /></button>
+          <span className="h-px bg-[#E8E2D5]" />
+          <button type="button" onClick={() => mapRef.current?.zoomOut()} className="cursor-pointer p-2.5 text-[#0D530E] hover:bg-[#F5F1E9]" aria-label="Zoom out"><ZoomOut className="h-4 w-4" /></button>
         </div>
-      </div>
-
-      {/* Map Pins for Bounties */}
-      {bounties.map((bounty) => {
-        const pos = getPinPosition(bounty.location.lat, bounty.location.lng);
-        const isCurrentSelected = selectedBounty?.id === bounty.id;
-
-        return (
-          <div
-            key={bounty.id}
-            className="absolute z-20 -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-transform duration-200 hover:scale-110"
-            style={{ left: pos.left, top: pos.top }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectBounty(isCurrentSelected ? null : bounty);
-            }}
-          >
-            {/* Custom Pin Icon Badge */}
-            <div
-              className={`px-2.5 py-1 rounded-full text-xs font-extrabold shadow-lg flex items-center gap-1 border-2 border-white transition-all ${getPinColor(
-                bounty
-              )} ${isCurrentSelected ? "scale-125 ring-4 ring-emerald-500 shadow-xl" : ""}`}
-            >
-              {bounty.isHighReward ? (
-                <Flame className="w-3.5 h-3.5" />
-              ) : (
-                <Sparkles className="w-3 h-3" />
-              )}
-              <span>{bounty.points}</span>
-            </div>
-
-            {/* Pin pointer tip */}
-            <div className="w-2 h-2 bg-slate-900 rotate-45 mx-auto -mt-1 shadow-xs border-r border-b border-white" />
-          </div>
-        );
-      })}
-
-      {/* Elevated Marker Card Preview on Map (Matches Reference Design SWISH Dental Popup) */}
-      {selectedBounty && (
-        <div
-          className="absolute z-30 -translate-x-1/2 bottom-16 sm:bottom-auto sm:top-6 left-1/2 sm:left-auto sm:right-6 w-[310px] bg-white rounded-2xl p-3 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="relative">
-            {/* Close Popup Button */}
-            <button
-              type="button"
-              onClick={() => onSelectBounty(null)}
-              className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white flex items-center justify-center transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Popup Image */}
-            <div className="relative h-28 w-full rounded-xl overflow-hidden mb-2.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={selectedBounty.beforeImageUrl}
-                alt={selectedBounty.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute bottom-2 left-2 bg-slate-900/80 backdrop-blur-xs text-amber-300 text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-400" />
-                <span>{selectedBounty.points} Pts</span>
-              </div>
-            </div>
-
-            {/* Content info */}
-            <div className="flex items-center justify-between mb-1">
-              <h4 className="font-bold text-slate-900 text-sm truncate pr-2">
-                {selectedBounty.title}
-              </h4>
-              <div className="flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
-                <Award className="w-3 h-3" />
-                <span>{selectedBounty.postedBy.reliabilityScore}%</span>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-500 mb-2 truncate">
-              📍 {selectedBounty.location.address}
-            </p>
-
-            <div className="flex items-center justify-between text-[11px] text-slate-500 mb-3 font-medium">
-              <span>{selectedBounty.distanceMiles} mi. away</span>
-              <span className="capitalize">{selectedBounty.wasteCategory}</span>
-            </div>
-
-            {/* Action CTA inside Popup */}
-            <button
-              type="button"
-              onClick={() => onOpenDetailModal(selectedBounty)}
-              className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1 shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
-            >
-              <span>View Full Details & Claim</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Map Control Buttons (Top Right) */}
-      <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
-        <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden flex flex-col">
-          <button
-            type="button"
-            onClick={() => setZoomLevel((z) => Math.min(1.4, z + 0.1))}
-            className="p-2 hover:bg-slate-100 text-slate-700 transition-colors"
-            title="Zoom In"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-          <div className="h-px bg-slate-200" />
-          <button
-            type="button"
-            onClick={() => setZoomLevel((z) => Math.max(0.8, z - 0.1))}
-            className="p-2 hover:bg-slate-100 text-slate-700 transition-colors"
-            title="Zoom Out"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            setZoomLevel(1);
-            onSelectBounty(null);
-          }}
-          className="p-2.5 bg-white hover:bg-slate-100 text-slate-700 rounded-xl shadow-md border border-slate-200 transition-colors"
-          title="Recenter Map"
-        >
-          <Crosshair className="w-4 h-4 text-emerald-600" />
+        <button type="button" onClick={recenter} className="cursor-pointer rounded-xl border border-[#E8E2D5] bg-white p-2.5 text-[#306D29] shadow-md hover:bg-[#F5F1E9]" aria-label={locationStatus === "live" ? "Center on my location" : "Center on Manila"}>
+          {locationStatus === "live" ? <LocateFixed className="h-4 w-4" /> : <Crosshair className="h-4 w-4" />}
         </button>
       </div>
 
-      {/* Map Status Legend (Bottom Left) */}
-      <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-md rounded-xl p-2.5 shadow-md border border-slate-200/80 text-[11px] font-semibold text-slate-700 hidden sm:flex items-center gap-3">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-600 ring-2 ring-blue-200" />
-          <span>Open</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-amber-200" />
-          <span>In Progress</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-purple-600 ring-2 ring-purple-200" />
-          <span>Pending Proof</span>
-        </div>
-      </div>
+      {selectedBounty && (
+        <article className="absolute bottom-20 left-1/2 z-[500] w-[min(320px,calc(100%-2rem))] -translate-x-1/2 rounded-2xl border border-[#E8E2D5] bg-white p-3.5 shadow-2xl sm:bottom-auto sm:left-auto sm:right-4 sm:top-16 sm:translate-x-0">
+          <button type="button" onClick={() => onSelectBounty(null)} className="absolute right-5 top-5 z-10 grid h-7 w-7 cursor-pointer place-items-center rounded-full bg-[#0D530E]/85 text-white shadow-md hover:bg-[#0D530E]" aria-label="Close bounty preview"><X className="h-4 w-4" /></button>
+          <div className="relative mb-2.5 h-32 overflow-hidden rounded-xl border border-[#E8E2D5] bg-[#F5F1E9]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={selectedBounty.beforeImageUrl} alt={selectedBounty.title} className="h-full w-full object-cover" />
+            <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-lg bg-[#0D530E]/90 px-2.5 py-1 text-xs font-extrabold text-white shadow-sm backdrop-blur-sm"><Sparkles className="h-3.5 w-3.5" />{selectedBounty.points} Pts</span>
+          </div>
+          <div className="mb-1 flex items-start justify-between gap-2">
+            <h4 className="truncate text-sm font-extrabold leading-snug text-[#0D530E]">{selectedBounty.title}</h4>
+            <span className="flex shrink-0 items-center gap-1 rounded-lg border border-[#E8E2D5] bg-[#F5F1E9] px-2 py-0.5 text-xs font-bold text-[#0D530E]"><Award className="h-3.5 w-3.5 text-[#306D29]" />{selectedBounty.postedBy.reliabilityScore}%</span>
+          </div>
+          <p className="mb-2 truncate text-xs font-semibold text-[#306D29]">📍 {selectedBounty.location.address}</p>
+          <div className="mb-3 flex items-center justify-between text-[11px] font-semibold text-[#0D530E]/80">
+            <span>{selectedBounty.distanceMiles} mi · {selectedBounty.location.neighborhood}</span>
+            <span className="rounded-md border border-[#E8E2D5] bg-[#F5F1E9] px-2 py-0.5 capitalize">{selectedBounty.wasteCategory}</span>
+          </div>
+          <div className="flex gap-2">
+            <a href={`https://www.google.com/maps/dir/?api=1&destination=${selectedBounty.location.lat},${selectedBounty.location.lng}`} target="_blank" rel="noopener noreferrer" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#E8E2D5] bg-[#F5F1E9] text-[#306D29] hover:bg-[#E8E2D5]" aria-label="Get directions"><ExternalLink className="h-4 w-4" /></a>
+            <button type="button" onClick={() => onOpenDetailModal(selectedBounty)} className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-xl bg-[#306D29] px-3 py-2.5 text-xs font-extrabold text-white shadow-md transition-colors hover:bg-[#0D530E]">View & Claim <ChevronRight className="h-3.5 w-3.5" /></button>
+          </div>
+        </article>
+      )}
 
-      {/* Quick Action Floating Button (FAB) - Bottom Right */}
-      <button
-        type="button"
-        onClick={onOpenPostBounty}
-        className="absolute bottom-6 right-6 z-30 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-sm px-5 py-3.5 rounded-full shadow-2xl shadow-emerald-600/40 flex items-center gap-2 transition-all cursor-pointer group"
-      >
-        <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center group-hover:rotate-90 transition-transform">
-          <Plus className="w-4 h-4" />
-        </div>
-        <span>Post Bounty</span>
+      <div className="pointer-events-none absolute bottom-4 left-4 z-[400] hidden items-center gap-3 rounded-xl border border-[#E8E2D5] bg-white/95 p-2.5 text-[11px] font-bold text-[#0D530E] shadow-md backdrop-blur-md sm:flex">
+        <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-[#306D29]" />Open</span>
+        <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-[#C47A2C]" />In progress</span>
+        <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full bg-[#5B6596]" />Pending proof</span>
+      </div>
+      <button type="button" onClick={onOpenPostBounty} className="absolute bottom-5 right-5 z-[500] flex cursor-pointer items-center gap-2 rounded-full border border-white/30 bg-[#306D29] px-5 py-3.5 text-sm font-black text-white shadow-xl transition-all hover:bg-[#0D530E] active:scale-95">
+        <span className="grid h-6 w-6 place-items-center rounded-full bg-white/20"><Plus className="h-4 w-4" /></span>Post Bounty
       </button>
-    </div>
+    </section>
   );
 }

@@ -28,29 +28,29 @@ export default function BountyCard({
     switch (bounty.status) {
       case "open":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-xs">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-extrabold bg-[#306D29] text-[#FBF5DD] shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#E7E1B1] animate-ping" />
             Open
           </span>
         );
       case "in_progress":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-white shadow-xs">
-            <Clock className="w-3 h-3" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-[#0D530E] text-[#E7E1B1] shadow-sm">
+            <Clock className="w-3 h-3 text-[#E7E1B1]" />
             In Progress
           </span>
         );
       case "pending_verification":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-600 text-white shadow-xs">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-[#306D29] text-[#FBF5DD] shadow-sm">
             <ShieldCheck className="w-3 h-3" />
             Pending Review
           </span>
         );
       case "verified":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-xs">
-            <CheckCircle2 className="w-3 h-3" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold bg-[#0D530E] text-[#FBF5DD] shadow-sm">
+            <CheckCircle2 className="w-3 h-3 text-[#E7E1B1]" />
             Cleaned
           </span>
         );
@@ -62,14 +62,14 @@ export default function BountyCard({
   return (
     <div
       onClick={() => onSelect(bounty)}
-      className={`group relative bg-white rounded-2xl border transition-all duration-200 overflow-hidden cursor-pointer hover:shadow-lg ${
+      className={`group relative bg-[#FFFFFF] rounded-2xl border transition-all duration-200 overflow-hidden cursor-pointer hover:shadow-xl ${
         isSelected
-          ? "border-emerald-600 ring-2 ring-emerald-500/20 shadow-md"
-          : "border-slate-200 hover:border-slate-300"
+          ? "border-[#306D29] ring-2 ring-[#306D29]/40 shadow-md scale-[1.01]"
+          : "border-[#E8E2D5] hover:border-[#306D29]"
       }`}
     >
       {/* Thumbnail Section */}
-      <div className="relative aspect-[16/10] w-full bg-slate-100 overflow-hidden">
+      <div className="relative aspect-[16/10] w-full bg-[#F5F1E9] overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={bounty.beforeImageUrl}
@@ -81,22 +81,22 @@ export default function BountyCard({
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
           {getStatusBadge()}
           {bounty.isHighReward && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-600 text-white shadow-xs animate-pulse">
-              <Flame className="w-3 h-3" />
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-[#0D530E] text-[#FCFAF7] border border-[#E8E2D5]/40 shadow-xs animate-pulse">
+              <Flame className="w-3 h-3 text-[#FCFAF7]" />
               Event Pick
             </span>
           )}
         </div>
 
         {/* Points Pill */}
-        <div className="absolute top-2.5 right-2.5 bg-slate-900/80 backdrop-blur-md text-amber-300 font-bold text-xs px-2.5 py-1 rounded-full flex items-center gap-1 border border-white/20 shadow-xs">
-          <Sparkles className="w-3 h-3 text-amber-400" />
+        <div className="absolute top-2.5 right-2.5 bg-[#0D530E]/90 backdrop-blur-md text-[#FCFAF7] font-extrabold text-xs px-2.5 py-1 rounded-full flex items-center gap-1 border border-[#E8E2D5]/30 shadow-xs">
+          <Sparkles className="w-3 h-3 text-[#F5F1E9]" />
           <span>{bounty.points} Pts</span>
         </div>
 
         {/* Distance Badge */}
-        <div className="absolute bottom-2.5 left-2.5 bg-white/90 backdrop-blur-sm text-slate-800 text-[11px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-xs">
-          <MapPin className="w-3 h-3 text-emerald-600" />
+        <div className="absolute bottom-2.5 left-2.5 bg-[#FFFFFF]/95 backdrop-blur-sm text-[#0D530E] text-[11px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 border border-[#E8E2D5] shadow-xs">
+          <MapPin className="w-3 h-3 text-[#306D29]" />
           <span>{bounty.distanceMiles} mi. away</span>
         </div>
       </div>
@@ -106,28 +106,28 @@ export default function BountyCard({
         <div>
           {/* Header Row: Title & Trust Rating */}
           <div className="flex items-start justify-between gap-2 mb-1.5">
-            <h3 className="font-bold text-slate-900 text-base leading-snug group-hover:text-emerald-700 transition-colors line-clamp-1">
+            <h3 className="font-extrabold text-[#0D530E] text-base leading-snug group-hover:text-[#306D29] transition-colors line-clamp-1">
               {bounty.title}
             </h3>
-            <div className="flex items-center gap-0.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md shrink-0">
-              <Award className="w-3 h-3 text-emerald-600" />
+            <div className="flex items-center gap-0.5 text-xs font-bold text-[#0D530E] bg-[#F5F1E9] px-2 py-0.5 rounded-md shrink-0 border border-[#E8E2D5]">
+              <Award className="w-3 h-3 text-[#306D29]" />
               <span>{bounty.postedBy.reliabilityScore}%</span>
             </div>
           </div>
 
           {/* Location / Address */}
-          <p className="text-xs text-slate-600 flex items-center gap-1 mb-2 font-medium">
-            <span className="text-slate-400">📍</span>
+          <p className="text-xs text-[#306D29] flex items-center gap-1 mb-2 font-semibold">
+            <span>📍</span>
             <span className="truncate">{bounty.location.address}</span>
           </p>
 
           {/* Metadata: Category & Time */}
-          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100 mb-3">
-            <span className="capitalize font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+          <div className="flex items-center justify-between text-[11px] text-[#0D530E]/70 pt-2.5 border-t border-[#E8E2D5] mb-3">
+            <span className="capitalize font-bold text-[#0D530E] bg-[#F5F1E9] px-2 py-0.5 rounded-md border border-[#E8E2D5]">
               {bounty.wasteCategory} Waste
             </span>
-            <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3 text-slate-400" />
+            <span className="flex items-center gap-1 font-medium">
+              <Clock className="w-3 h-3 text-[#306D29]" />
               {bounty.timeAgo}
             </span>
           </div>
@@ -137,13 +137,7 @@ export default function BountyCard({
         <div className="pt-1">
           <button
             type="button"
-            className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-              bounty.status === "open"
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs group-hover:shadow-emerald-500/20"
-                : bounty.status === "in_progress"
-                ? "bg-amber-500 hover:bg-amber-600 text-white"
-                : "bg-purple-600 hover:bg-purple-700 text-white"
-            }`}
+            className="w-full py-2.5 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-[#306D29] hover:bg-[#0D530E] text-[#FFFFFF] shadow-sm shadow-[#306D29]/20 group-hover:shadow-md"
           >
             <span>
               {bounty.status === "open"
@@ -159,3 +153,4 @@ export default function BountyCard({
     </div>
   );
 }
+
