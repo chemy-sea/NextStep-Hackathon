@@ -22,7 +22,7 @@ export default function SplitExplorer() {
 
   const [filters, setFilters] = useState<FilterState>({
     searchQuery: "",
-    locationQuery: "Austin, TX",
+    locationQuery: "Manila, Philippines",
     statusFilter: "all",
     categoryFilter: "all",
     maxDistance: 10,
@@ -169,7 +169,7 @@ export default function SplitExplorer() {
                   event: approved
                     ? "Cleanup approved & points awarded"
                     : "Flagged for follow-up review",
-                  actor: "Austin Parks Official",
+                  actor: "Manila Parks & Cleanliness Official",
                 },
               ],
             }
@@ -196,7 +196,7 @@ export default function SplitExplorer() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans">
+    <div className="min-h-screen bg-[#FCFAF7] flex flex-col font-sans">
       {/* Top Universal Header */}
       <HeaderBar
         userRole={userRole}
@@ -213,10 +213,10 @@ export default function SplitExplorer() {
         totalResults={filteredBounties.length}
       />
 
-      {/* Main Responsive Split Discovery View (Matches Reference Design) */}
+      {/* Main Responsive Split Discovery View */}
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Pane: Bounty Cards Grid (Visible in 'split' or 'list' mode) */}
+          {/* Left Pane: Bounty Cards Grid */}
           <div
             className={`space-y-4 ${
               viewMode === "map"
@@ -227,21 +227,21 @@ export default function SplitExplorer() {
             }`}
           >
             {/* Section Heading Banner */}
-            <div className="flex items-baseline justify-between border-b border-slate-200 pb-3">
+            <div className="flex items-baseline justify-between border-b border-[#E8E2D5] pb-3">
               <div>
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                <h1 className="text-xl sm:text-2xl font-black text-[#0D530E] tracking-tight">
                   Explore Litter Bounties in{" "}
-                  <span className="text-emerald-700">
-                    {filters.locationQuery || "Austin, TX"}
+                  <span className="text-[#306D29]">
+                    {filters.locationQuery || "Manila, Philippines"}
                   </span>
                 </h1>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                <p className="text-xs text-[#306D29]/80 font-bold mt-0.5">
                   {filteredBounties.length} active bounties nearby • Clean up & earn rewards
                 </p>
               </div>
             </div>
 
-            {/* Cards Grid: 2 columns on desktop (like reference design) */}
+            {/* Cards Grid */}
             {filteredBounties.length > 0 ? (
               <div
                 className={`grid gap-4 ${
@@ -262,16 +262,16 @@ export default function SplitExplorer() {
                   />
                 ))}
 
-                {/* Callout Card (Matches Reference Design promo card: "Want to view all of our results?") */}
-                <div className="bg-gradient-to-br from-emerald-900 to-slate-900 text-white rounded-2xl p-5 flex flex-col justify-between shadow-md border border-emerald-800/40">
+                {/* Callout Card */}
+                <div className="bg-gradient-to-br from-[#0D530E] to-[#2D6A27] text-[#FCFAF7] rounded-2xl p-5 flex flex-col justify-between shadow-md border border-[#E8E2D5]/30">
                   <div>
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3">
-                      <Sparkles className="w-5 h-5" />
+                    <div className="w-10 h-10 rounded-xl bg-[#F5F1E9]/20 text-[#F5F1E9] flex items-center justify-center mb-3 border border-[#E8E2D5]/30">
+                      <Sparkles className="w-5 h-5 text-[#F5F1E9]" />
                     </div>
-                    <h3 className="font-extrabold text-base mb-1 text-emerald-100">
+                    <h3 className="font-black text-base mb-1.5 text-[#FCFAF7]">
                       Organizing a Community Cleanup?
                     </h3>
-                    <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                    <p className="text-xs text-[#F5F1E9]/90 leading-relaxed mb-4 font-medium">
                       Create sponsor-funded event pools, invite neighborhood teams, and earn verified civic impact badges.
                     </p>
                   </div>
@@ -279,7 +279,7 @@ export default function SplitExplorer() {
                   <button
                     type="button"
                     onClick={() => setIsPostModalOpen(true)}
-                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                    className="w-full py-2.5 bg-[#F5F1E9] hover:bg-[#FFFFFF] active:scale-95 text-[#0D530E] font-black text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
                   >
                     <span>Post New Bounty Pool</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -288,20 +288,20 @@ export default function SplitExplorer() {
               </div>
             ) : (
               /* Empty state */
-              <div className="text-center py-16 px-4 bg-slate-50 rounded-2xl border border-slate-200">
-                <div className="w-12 h-12 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center mx-auto mb-3">
+              <div className="text-center py-16 px-4 bg-[#FFFFFF] rounded-2xl border border-[#E8E2D5] shadow-xs">
+                <div className="w-12 h-12 rounded-full bg-[#F5F1E9] text-[#0D530E] flex items-center justify-center mx-auto mb-3">
                   <ShieldCheck className="w-6 h-6" />
                 </div>
-                <h3 className="font-bold text-slate-800 text-base mb-1">
+                <h3 className="font-extrabold text-[#0D530E] text-base mb-1">
                   No bounties match your filters
                 </h3>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
+                <p className="text-xs text-[#306D29] max-w-sm mx-auto mb-4 font-medium">
                   Try widening your distance radius, clearing category filters, or be the first to spot and report litter in this area!
                 </p>
                 <button
                   type="button"
                   onClick={() => setIsPostModalOpen(true)}
-                  className="px-5 py-2.5 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 transition-colors"
+                  className="px-5 py-2.5 bg-[#306D29] hover:bg-[#0D530E] text-[#FFFFFF] font-bold text-xs rounded-xl shadow-sm transition-colors cursor-pointer"
                 >
                   + Post a New Bounty
                 </button>

@@ -1,34 +1,60 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-warm-white: #FCFAF7;
+  --color-warm-cream: #F5F1E9;
+  --color-warm-border: #E8E2D5;
+  --color-forest: #306D29;
+  --color-deepforest: #0D530E;
+
+  --background: #FCFAF7;
+  --foreground: #0D530E;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-warm-white: #FCFAF7;
+  --color-warm-cream: #F5F1E9;
+  --color-warm-border: #E8E2D5;
+  --color-forest: #306D29;
+  --color-deepforest: #0D530E;
+
+  --color-brand-bg: #FCFAF7;
+  --color-brand-surface: #FFFFFF;
+  --color-brand-sand: #F5F1E9;
+  --color-brand-border: #E8E2D5;
+  --color-brand-forest: #306D29;
+  --color-brand-dark: #0D530E;
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  min-height: 100vh;
 }
 
-/* Reserve space below content for the fixed bottom tab bar on mobile.
-   Layout-only, matches the breakpoint used in Nav.module.css. */
+/* Custom scrollbar matching warm whitish palette */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #FCFAF7;
+}
+::-webkit-scrollbar-thumb {
+  background: #E8E2D5;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #306D29;
+}
+
+/* Reserve space below content for the fixed bottom tab bar on mobile. */
 main {
-  padding-bottom: 3.5rem;
+  padding-bottom: 4rem;
 }
 
 @media (min-width: 768px) {
@@ -36,3 +62,59 @@ main {
     padding-bottom: 0;
   }
 }
+
+.leaflet-container {
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+.leaflet-control-attribution {
+  font-size: 9px !important;
+}
+
+.trashmap-marker {
+  position: relative;
+  display: flex;
+  width: max-content;
+  min-width: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 9px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #306D29;
+  color: #fff;
+  font: 800 11px/1 var(--font-sans), sans-serif;
+  box-shadow: 0 5px 14px #0D530E55;
+  transition: transform .18s, box-shadow .18s;
+}
+
+.trashmap-marker::after {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  background: inherit;
+  content: "";
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.trashmap-marker:hover,
+.trashmap-marker.is-selected {
+  z-index: 2;
+  transform: translateY(-3px) scale(1.12);
+  box-shadow: 0 8px 22px #0D530E80;
+}
+
+.trashmap-marker--in-progress { background: #C47A2C; }
+.trashmap-marker--pending-verification { background: #5B6596; }
+.trashmap-marker--verified { background: #0D530E; }
+.trashmap-marker--event { background: #0D530E; box-shadow: 0 0 0 5px #306D2955, 0 6px 16px #0D530E66; }
+
+.trashmap-user-location {
+  filter: drop-shadow(0 0 6px #306D29);
+}
+
